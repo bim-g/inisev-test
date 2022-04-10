@@ -9,10 +9,13 @@ class Websites extends Model
 {
     use HasFactory;
 
-    function websitePost(){
+    function posts(){
         return $this->hasMany(Posts::class,'website_id');
     }
-    
+    function subsribers(){
+        return $this->hasMany(Subscribers::class,'website_id');
+    }
+
     function createdBy(){
         return $this->belongsTo(User::class,'created_by');
     }

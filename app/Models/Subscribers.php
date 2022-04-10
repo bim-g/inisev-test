@@ -8,4 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class Subscribers extends Model
 {
     use HasFactory;
+
+    function websites(){
+        return $this->belongsTo(Websites::class,"website_id");
+    }
 }

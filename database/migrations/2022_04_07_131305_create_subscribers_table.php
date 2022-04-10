@@ -15,7 +15,7 @@ class CreateSubscribersTable extends Migration
     {
         Schema::create('subscribers', function (Blueprint $table) {
             $table->id()->autoIncrement();
-            $table->string('email',100)->unique();
+            $table->string('email',100);
             $table->integer('website_id');
             $table->foreign('website_id')->references('id')->on('websites');
             $table->timestamps();

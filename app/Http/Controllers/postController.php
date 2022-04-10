@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\NotifyMail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
@@ -23,23 +24,59 @@ class postController extends Controller
         $this->error['error']['message']="";
 
     }
-    function getPosts(){
+
+    /**
+     * @return JsonResponse
+     */
+    function getPosts(): JsonResponse
+    {
         $posts=$this->post->get();
         return response()->json($posts,200) ;
     }
-    function getPostById(Request $request,$id){
+
+    /**
+     * @param $id
+     * @return JsonResponse
+     */
+    function getPostById($id): JsonResponse
+    {
         try{
-            $post=$this->post::with('websites')->find($request->id);
+            $post=$this->post::with(['postBy','website','emails'])->find($id);
             if(!$post){
                 $this->error['error']['message']="Posts Not found!";
-                return response()->json($this->error,404);               
+                return response()->json($this->error,404);
             }
             return response()->json($post,201);
         }catch(\Exception $ex){
             return response()->json($ex->getMessage(),404);
         }
     }
-    function AddPost(Request $request){        
+
+    /**
+     * Delete Existing Post
+     * @param $id
+     * @return JsonResponse
+     */
+    function deletePost($id): JsonResponse
+    {
+        try{
+            $result=$this->post->where('id',$id)->delete($id);
+            if(!$result){
+                $this->error['error']['message']="Posts has been Deleted!";
+                return response()->json($this->error,404);
+            }
+            return response()->json(['success'=>['message'=>'Posts has been Deleted with success!']],201);
+        }catch(\Exception $ex){
+            return response()->json($ex->getMessage(),404);
+        }
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    function AddPost(Request $request): JsonResponse
+    {
         try{
             $rules=[
                 'title'=>['required','string','unique:posts','min:3','max:100'],
@@ -54,11 +91,11 @@ class postController extends Controller
             }
             //
             $check_website_exist=Websites::get()->find($request->website_id);
-            if(!$check_website_exist){  
-                $this->error['error']['message']="This website does not exist is alreay register to this website";  
+            if(!$check_website_exist){
+                $this->error['error']['message']="This website does not exist is alreay register to this website";
                 return response()->json($this->error,400);
-            } 
-            //  
+            }
+            //
             $check_user_exist=User::get()->find($request->post_by);
             if(!$check_user_exist){
                 $this->error['error']['message']="User does not exist";
@@ -89,7 +126,10 @@ class postController extends Controller
             return response()->json($this->error,400);
         }
     }
-
+    /**
+     * @param array $data
+     * @return array|bool|void
+     */
     private function saveEmail(array $data){
         try{
             $subscribers = Subscribers::get()->where('website_id',$data['website_id']);
@@ -113,6 +153,9 @@ class postController extends Controller
         }
     }
 
+    /**
+     * @return array|bool|void
+     */
     private function sendEmails(){
         try{
             $mailQues=Email::get()->where('status',false);
@@ -120,16 +163,52 @@ class postController extends Controller
                 return ;
             }
             foreach($mailQues as $mail){
-                Mail::to($mail->email)->send(new NotifyMail($mail));
+                Mail::to($mail->email)
+                    ->send(new NotifyMail($mail));
                 if(Mail::failures()){
                     throw new \Exception("Email not send");
                 }
                 $mail->status=true;
-                $mail->save();                
+                $mail->save();
             }
             return true;
         }catch(\Exception $e){
             return ['exception'=>$e->getMessage()];
+        }
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    function getPostsEmail(): JsonResponse{
+        try {
+            $postsEmails=$this->post::with('emails')->get();
+            if(count($postsEmails)<1){
+                $this->error['error']['message'] = 'There is no posts available';
+                return response()->json($this->error, 404);
+            }
+            return response()->json($postsEmails,200);
+        }catch (\Exception $ex){
+            $this->error['error']['message']=$ex->getMessage();
+            return response()->json($this->error,400);
+        }
+    }
+    /**
+     * @param $status
+     * @return JsonResponse
+     */
+    function getPostEmailByStatus($status): JsonResponse
+    {
+        try {
+            $postsEmails=Email::with('post')->get()->where('status',$status);
+            if(count($postsEmails)<1){
+                $this->error['error']['message'] = 'There is no email with such status';
+                return response()->json($this->error, 404);
+            }
+            return response()->json($postsEmails,200);
+        }catch (\Exception $ex){
+            $this->error['error']['message']=$ex->getMessage();
+            return response()->json($this->error,400);
         }
     }
 }

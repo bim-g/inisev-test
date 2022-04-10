@@ -16,4 +16,11 @@ class Posts extends Model
     function postBy(){
         return $this->belongsTo(User::class,'post_by');
     }
+    function website(){
+        return $this->belongsTo(Websites::class,'website_id');
+    }
+
+    function emails(){
+        return $this->hasMany(Email::class,'post_id');
+    }
 }
